@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1220">
+  <title>Valle | Control de inventario</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0b1220',
+            panel: '#111b2d',
+            line: '#243149',
+            brand: '#f5a524',
+          },
+          boxShadow: {
+            soft: '0 20px 60px rgba(0,0,0,.24)',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      background:
+        radial-gradient(ellipse at 12% -10%, rgba(245,165,36,.12), transparent 34rem),
+        radial-gradient(ellipse at 100% 20%, rgba(59,130,246,.08), transparent 30rem),
+        #0b1220;
+    }
+    select option { background: #111b2d; color: #e5e7eb; }
+    .skeleton {
+      background: linear-gradient(90deg, #172236 25%, #22314a 50%, #172236 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite linear;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 antialiased selection:bg-amber-400/30">
+  <div class="min-h-screen lg:grid lg:grid-cols-[250px_minmax(0,1fr)]">
+    <aside class="hidden border-r border-white/[.07] bg-ink/60 px-5 py-7 lg:flex lg:flex-col">
+      <a href="#" class="flex items-center gap-3" aria-label="Constructora Del Valle, inicio">
+        <span class="grid h-11 w-11 place-items-center rounded-2xl bg-brand text-ink shadow-lg shadow-amber-500/20">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6M9 10h.01M15 10h.01"/>
+          </svg>
+        </span>
+        <span>
+          <span class="block text-sm font-bold tracking-wide">DEL VALLE</span>
+          <span class="text-[11px] text-slate-500">Control de inventario</span>
+        </span>
+      </a>
+
+      <p class="mb-3 mt-12 px-3 text-[10px] font-bold uppercase tracking-[.2em] text-slate-600">Workspace</p>
+      <nav class="space-y-1 text-sm">
+        <a href="#resumen" class="flex items-center gap-3 rounded-xl bg-white/[.07] px-3 py-2.5 font-medium text-white">
+          <svg class="h-4 w-4 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Resumen
+        </a>
+        <a href="#alertas" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-400 transition hover:bg-white/[.04] hover:text-white">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+          Alertas de reorden
+        </a>
+        <a href="#duplicados" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-400 transition hover:bg-white/[.04] hover:text-white">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+          Posibles duplicados
+        </a>
+      </nav>
+
+      <div class="mt-auto rounded-2xl border border-white/[.07] bg-white/[.03] p-4">
+        <div class="mb-2 flex items-center gap-2">
+          <span id="connectionDot" class="h-2 w-2 rounded-full bg-slate-500"></span>
+          <span id="connectionLabel" class="text-xs font-medium text-slate-400">Verificando API</span>
+        </div>
+        <p class="break-all text-[11px] leading-5 text-slate-600">http://localhost:3000</p>
+      </div>
+    </aside>
+
+    <main class="min-w-0 px-4 py-5 sm:px-7 sm:py-7 lg:px-10 lg:py-9">
+      <header class="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3 lg:hidden">
+          <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand text-ink">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg>
+          </span>
+          <span class="text-sm font-bold tracking-wide">DEL VALLE</span>
+        </div>
+        <div class="hidden lg:block">
+          <p class="text-xs font-medium text-slate-500">CONSTRUCTORA DEL VALLE S.A.</p>
+          <h1 class="mt-1 text-2xl font-semibold tracking-tight">Panel de control</h1>
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <span class="flex items-center gap-2 rounded-full border border-white/[.08] bg-white/[.03] px-3 py-2 text-xs text-slate-400 lg:hidden">
+            <span id="mobileConnectionDot" class="h-2 w-2 rounded-full bg-slate-500"></span>
+            <span id="mobileConnectionLabel">Conectando</span>
+          </span>
+          <button id="refreshButton" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-3.5 py-2.5 text-sm font-medium text-slate-300 transition hover:border-white/20 hover:bg-white/[.08] disabled:cursor-wait disabled:opacity-50" type="button">
+            <svg id="refreshIcon" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9a7 7 0 0 1 11.6-2L20 12M4 12l2.8 5a7 7 0 0 0 11.6-2"/></svg>
+            <span class="hidden sm:inline">Actualizar</span>
+          </button>
+          <button id="loginButton" class="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-ink shadow-lg shadow-amber-500/10 transition hover:bg-amber-300" type="button">Iniciar sesión</button>
+          <button id="logoutButton" class="hidden rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/[.06]" type="button">Salir</button>
+        </div>
+      </header>
+
+      <div class="mb-7 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-xs font-medium text-slate-500 lg:hidden">CONSTRUCTORA DEL VALLE S.A.</p>
+          <h1 class="mt-1 text-2xl font-semibold tracking-tight lg:hidden">Panel de control</h1>
+          <p class="mt-2 text-sm text-slate-500">Inventario y compras <span class="px-1 text-slate-700">/</span> <span id="currentDate"></span></p>
+        </div>
+        <div id="userBadge" class="hidden items-center gap-2 rounded-full border border-white/[.08] bg-white/[.03] py-1.5 pl-1.5 pr-3">
+          <span class="grid h-7 w-7 place-items-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-300">U</span>
+          <span id="userName" class="max-w-40 truncate text-xs font-medium text-slate-300"></span>
+        </div>
+      </div>
+
+      <div id="globalMessage" class="mb-6 hidden rounded-xl border px-4 py-3 text-sm" role="status" aria-live="polite"></div>
+      <div id="authNotice" class="mb-6 hidden items-center justify-between gap-4 rounded-2xl border border-amber-400/20 bg-amber-400/[.06] px-4 py-3.5 sm:px-5">
+        <div class="flex items-start gap-3">
+          <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg>
+          <p class="text-sm leading-6 text-amber-100/80">Inicia sesión para cargar el inventario y habilitar las operaciones. La API requiere un token JWT.</p>
+        </div>
+        <button class="shrink-0 rounded-lg bg-amber-400 px-3 py-2 text-xs font-semibold text-ink hover:bg-amber-300" type="button" data-open-auth>Acceder</button>
+      </div>
+
+      <section id="resumen" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <article class="rounded-2xl border border-white/[.07] bg-panel/80 p-5 shadow-soft">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-400">Total de materiales</p>
+              <p id="materialsKpi" class="mt-4 text-3xl font-semibold tracking-tight">—</p>
+            </div>
+            <span class="grid h-10 w-10 place-items-center rounded-xl bg-blue-400/10 text-blue-300">
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5"/></svg>
+            </span>
+          </div>
+          <p class="mt-2 text-xs text-slate-600">Catálogo registrado en el sistema</p>
+        </article>
+        <article class="rounded-2xl border border-white/[.07] bg-panel/80 p-5 shadow-soft">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-400">Alertas de reorden</p>
+              <p id="alertsKpi" class="mt-4 text-3xl font-semibold tracking-tight">—</p>
+            </div>
+            <span class="grid h-10 w-10 place-items-center rounded-xl bg-rose-400/10 text-rose-300">
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 4.3 2.8 17.2A2 2 0 0 0 4.5 20h15a2 2 0 0 0 1.7-2.8L13.7 4.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 3h.01"/></svg>
+            </span>
+          </div>
+          <p class="mt-2 text-xs text-slate-600">Materiales por debajo del punto de reorden</p>
+        </article>
+        <article class="rounded-2xl border border-white/[.07] bg-panel/80 p-5 shadow-soft sm:col-span-2 xl:col-span-1">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-400">OC posiblemente duplicadas</p>
+              <p id="duplicatesKpi" class="mt-4 text-3xl font-semibold tracking-tight">—</p>
+            </div>
+            <span class="grid h-10 w-10 place-items-center rounded-xl bg-amber-400/10 text-amber-300">
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+            </span>
+          </div>
+          <p class="mt-2 text-xs text-slate-600">Coincidencias detectadas en una ventana de 48 h</p>
+        </article>
+      </section>
+
+      <section id="alertas" class="mt-7 overflow-hidden rounded-2xl border border-white/[.07] bg-panel/80 shadow-soft">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/[.06] px-5 py-4 sm:px-6">
+          <div class="flex items-center gap-3">
+            <span class="grid h-9 w-9 place-items-center rounded-xl bg-rose-400/10 text-rose-300">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 4.3 2.8 17.2A2 2 0 0 0 4.5 20h15a2 2 0 0 0 1.7-2.8L13.7 4.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 3h.01"/></svg>
+            </span>
+            <div>
+              <h2 class="text-sm font-semibold">Alertas y stock</h2>
+              <p class="mt-0.5 text-xs text-slate-500">Materiales que requieren atención de reabastecimiento</p>
+            </div>
+          </div>
+          <span id="alertsCount" class="rounded-full border border-white/[.08] px-2.5 py-1 text-xs text-slate-400">— alertas</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[690px] text-left text-sm">
+            <thead class="bg-white/[.02] text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <tr><th class="px-6 py-3.5">Código</th><th class="px-4 py-3.5">Material</th><th class="px-4 py-3.5">Stock actual</th><th class="px-4 py-3.5">Punto de reorden</th><th class="px-6 py-3.5 text-right">Estado</th></tr>
+            </thead>
+            <tbody id="stockTable" class="divide-y divide-white/[.05]">
+              <tr><td colspan="5" class="px-6 py-8"><div class="skeleton h-4 rounded"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="stockFooter" class="border-t border-white/[.06] px-6 py-3 text-xs text-slate-600">Los niveles de stock se calculan a partir de los movimientos.</div>
+      </section>
+
+      <section class="mt-7 grid gap-7 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div id="duplicados" class="overflow-hidden rounded-2xl border border-white/[.07] bg-panel/80 shadow-soft">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/[.06] px-5 py-4 sm:px-6">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-xl bg-amber-400/10 text-amber-300">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+              </span>
+              <div>
+                <h2 class="text-sm font-semibold">Detección de duplicados</h2>
+                <p class="mt-0.5 text-xs text-slate-500">Órdenes con proveedor, artículo y cantidad coincidentes</p>
+              </div>
+            </div>
+            <span id="duplicatesCount" class="rounded-full border border-white/[.08] px-2.5 py-1 text-xs text-slate-400">— casos</span>
+          </div>
+          <div id="duplicateList" class="divide-y divide-white/[.05]">
+            <div class="p-5"><div class="skeleton h-16 rounded-xl"></div></div>
+          </div>
+        </div>
+
+        <aside class="h-fit rounded-2xl border border-white/[.07] bg-panel/80 shadow-soft">
+          <div class="border-b border-white/[.06] px-5 py-4">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400/10 text-emerald-300">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14m-7-7h14"/></svg>
+              </span>
+              <div>
+                <h2 class="text-sm font-semibold">Movimiento rápido</h2>
+                <p class="mt-0.5 text-xs text-slate-500">Registra una entrada, salida o traslado</p>
+              </div>
+            </div>
+          </div>
+          <form id="movementForm" class="space-y-4 p-5">
+            <label class="block">
+              <span class="mb-1.5 block text-xs font-medium text-slate-400">Material</span>
+              <select id="materialSelect" name="materialId" required class="w-full rounded-xl border border-white/10 bg-ink px-3 py-2.5 text-sm text-slate-200 outline-none transition focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10">
+                <option value="">Inicia sesión para cargar materiales</option>
+              </select>
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="mb-1.5 block text-xs font-medium text-slate-400">Tipo</span>
+                <select id="movementType" name="tipo" required class="w-full rounded-xl border border-white/10 bg-ink px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-amber-400/60">
+                  <option value="entrada">Entrada</option>
+                  <option value="salida">Salida</option>
+                  <option value="traslado">Traslado</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="mb-1.5 block text-xs font-medium text-slate-400">Cantidad</span>
+                <input name="cantidad" type="number" min="0.001" step="any" placeholder="0" required class="w-full rounded-xl border border-white/10 bg-ink px-3 py-2.5 text-sm text-slate-200 outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+              </label>
+            </div>
+            <div id="transferFields" class="hidden grid-cols-2 gap-3">
+              <label class="block">
+                <span class="mb-1.5 block text-xs font-medium text-slate-400">Ubicación origen</span>
+                <input name="ubicacionOrigen" type="text" maxlength="100" placeholder="Almacén A" class="w-full rounded-xl border border-white/10 bg-ink px-3 py-2.5 text-sm text-slate-200 outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+              </label>
+              <label class="block">
+                <span class="mb-1.5 block text-xs font-medium text-slate-400">Ubicación destino</span>
+                <input name="ubicacionDestino" type="text" maxlength="100" placeholder="Almacén B" class="w-full rounded-xl border border-white/10 bg-ink px-3 py-2.5 text-sm text-slate-200 outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+              </label>
+            </div>
+            <label class="block">
+              <span class="mb-1.5 block text-xs font-medium text-slate-400">Referencia <span class="font-normal text-slate-600">(opcional)</span></span>
+              <input name="referencia" type="text" maxlength="100" placeholder="REC-2026-001" class="w-full rounded-xl border border-white/10 bg-ink px-3 py-2.5 text-sm text-slate-200 outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+            </label>
+            <div id="movementMessage" class="hidden rounded-xl border px-3 py-2.5 text-xs leading-5" role="status" aria-live="polite"></div>
+            <button id="movementSubmit" type="submit" class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-ink transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m-7-7h14"/></svg>
+              Registrar movimiento
+            </button>
+            <p class="text-center text-[11px] leading-5 text-slate-600">Las salidas no pueden exceder el stock disponible.</p>
+          </form>
+        </aside>
+      </section>
+
+      <footer class="flex flex-wrap items-center justify-between gap-2 py-7 text-[11px] text-slate-600">
+        <span>Constructora Del Valle S.A. <span class="px-1 text-slate-700">·</span> Gestión de inventario</span>
+        <span id="lastUpdated">Datos aún no actualizados</span>
+      </footer>
+    </main>
+  </div>
+
+  <div id="authModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="w-full max-w-md rounded-2xl border border-white/10 bg-panel p-6 shadow-2xl sm:p-7">
+      <div class="mb-6 flex items-start justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[.16em] text-amber-300">Acceso seguro</p>
+          <h2 id="authTitle" class="mt-2 text-xl font-semibold">Iniciar sesión</h2>
+          <p id="authDescription" class="mt-1 text-sm text-slate-500">Ingresa tus credenciales para acceder al inventario.</p>
+        </div>
+        <button id="closeAuthButton" type="button" aria-label="Cerrar" class="rounded-lg p-2 text-slate-500 hover:bg-white/[.06] hover:text-white">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m18 6-12 12M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="authForm" class="space-y-4">
+        <label id="nameField" class="hidden block">
+          <span class="mb-1.5 block text-xs font-medium text-slate-400">Nombre</span>
+          <input name="nombre" type="text" maxlength="100" autocomplete="name" class="w-full rounded-xl border border-white/10 bg-ink px-3.5 py-3 text-sm outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+        </label>
+        <label class="block">
+          <span class="mb-1.5 block text-xs font-medium text-slate-400">Correo electrónico</span>
+          <input name="correo" type="email" autocomplete="email" required placeholder="usuario@empresa.com" class="w-full rounded-xl border border-white/10 bg-ink px-3.5 py-3 text-sm outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+        </label>
+        <label class="block">
+          <span class="mb-1.5 block text-xs font-medium text-slate-400">Contraseña</span>
+          <input name="password" type="password" minlength="8" autocomplete="current-password" required placeholder="Mínimo 8 caracteres" class="w-full rounded-xl border border-white/10 bg-ink px-3.5 py-3 text-sm outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+        </label>
+        <div id="authMessage" class="hidden rounded-xl border px-3 py-2.5 text-xs leading-5" role="alert"></div>
+        <button id="authSubmit" type="submit" class="w-full rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-ink transition hover:bg-amber-300 disabled:cursor-wait disabled:opacity-60">Iniciar sesión</button>
+      </form>
+      <p class="mt-5 text-center text-sm text-slate-500">
+        <span id="authToggleText">¿No tienes cuenta?</span>
+        <button id="authToggleButton" type="button" class="ml-1 font-medium text-amber-300 hover:text-amber-200">Crear cuenta</button>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const API_BASE = 'http://localhost:3000/api';
+      const TOKEN_KEY = 'delValleInventoryToken';
+      const elements = Object.fromEntries([
+        'materialsKpi', 'alertsKpi', 'duplicatesKpi', 'alertsCount',
+        'duplicatesCount', 'stockTable', 'stockFooter', 'duplicateList',
+        'globalMessage', 'authNotice', 'loginButton', 'logoutButton',
+        'userBadge', 'userName', 'authModal', 'authForm', 'authTitle',
+        'authDescription', 'authSubmit', 'authMessage', 'authToggleText',
+        'authToggleButton', 'nameField', 'movementForm', 'movementMessage',
+        'movementSubmit', 'movementType', 'materialSelect', 'transferFields',
+        'refreshButton', 'refreshIcon', 'lastUpdated', 'connectionDot',
+        'connectionLabel', 'mobileConnectionDot', 'mobileConnectionLabel',
+        'closeAuthButton',
+      ].map((id) => [id, document.getElementById(id)]));
+
+      let token = localStorage.getItem(TOKEN_KEY) || '';
+      let authMode = 'login';
+      let materials = [];
+
+      document.getElementById('currentDate').textContent = new Intl.DateTimeFormat('es-MX', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      }).format(new Date());
+
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        })[character]);
+      }
+
+      function formatNumber(value) {
+        const number = Number(value);
+        return Number.isFinite(number)
+          ? new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 }).format(number)
+          : '—';
+      }
+
+      function setConnection(connected, message) {
+        const dotClass = connected ? 'bg-emerald-400' : 'bg-rose-400';
+        elements.connectionDot.className = `h-2 w-2 rounded-full ${dotClass}`;
+        elements.mobileConnectionDot.className = `h-2 w-2 rounded-full ${dotClass}`;
+        elements.connectionLabel.textContent = message;
+        elements.mobileConnectionLabel.textContent = connected ? 'API en línea' : 'API sin conexión';
+        elements.connectionLabel.className = `text-xs font-medium ${connected ? 'text-emerald-300' : 'text-rose-300'}`;
+      }
+
+      function showMessage(element, message, type = 'error') {
+        const styles = type === 'success'
+          ? 'border-emerald-400/20 bg-emerald-400/[.07] text-emerald-200'
+          : 'border-rose-400/20 bg-rose-400/[.07] text-rose-200';
+        element.className = `rounded-xl border px-3 py-2.5 text-xs leading-5 ${styles}`;
+        element.textContent = message;
+      }
+
+      function hideMessage(element) {
+        element.className = 'hidden';
+        element.textContent = '';
+      }
+
+      async function request(path, options = {}) {
+        const headers = { Accept: 'application/json', ...(options.headers || {}) };
+        if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+        if (token) headers.Authorization = `Bearer ${token}`;
+
+        let response;
+        try {
+          response = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers,
+            signal: AbortSignal.timeout(10000),
+          });
+        } catch (error) {
+          if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+            throw new Error('La API tardó demasiado en responder. Verifica que el servidor esté activo.');
+          }
+          throw new Error('No se pudo conectar con la API local. Verifica que esté activa en http://localhost:3000.');
+        }
+
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 401 && !path.startsWith('/auth/')) {
+          clearSession();
+          openAuth('login');
+          const error = new Error('Tu sesión expiró o el token no es válido. Inicia sesión nuevamente.');
+          error.status = response.status;
+          throw error;
+        }
+        if (!response.ok) {
+          const error = new Error(data.error || `La solicitud falló (HTTP ${response.status}).`);
+          error.status = response.status;
+          throw error;
+        }
+        return data;
+      }
+
+      function openAuth(mode = 'login') {
+        setAuthMode(mode);
+        elements.authModal.classList.remove('hidden');
+        elements.authModal.classList.add('flex');
+        elements.authForm.elements.correo.focus();
+      }
+
+      function closeAuth() {
+        elements.authModal.classList.add('hidden');
+        elements.authModal.classList.remove('flex');
+        hideMessage(elements.authMessage);
+      }
+
+      function setAuthMode(mode) {
+        authMode = mode;
+        const registering = mode === 'register';
+        elements.authTitle.textContent = registering ? 'Crear cuenta' : 'Iniciar sesión';
+        elements.authDescription.textContent = registering
+          ? 'Registra tu cuenta para acceder al sistema.'
+          : 'Ingresa tus credenciales para acceder al inventario.';
+        elements.authSubmit.textContent = registering ? 'Crear cuenta y entrar' : 'Iniciar sesión';
+        elements.nameField.classList.toggle('hidden', !registering);
+        elements.authForm.elements.nombre.required = registering;
+        elements.authForm.elements.password.autocomplete = registering ? 'new-password' : 'current-password';
+        elements.authToggleText.textContent = registering ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?';
+        elements.authToggleButton.textContent = registering ? 'Iniciar sesión' : 'Crear cuenta';
+        hideMessage(elements.authMessage);
+      }
+
+      function updateSessionUI(usuario) {
+        const authenticated = Boolean(token);
+        elements.loginButton.classList.toggle('hidden', authenticated);
+        elements.logoutButton.classList.toggle('hidden', !authenticated);
+        elements.userBadge.classList.toggle('hidden', !authenticated);
+        elements.userBadge.classList.toggle('flex', authenticated);
+        elements.authNotice.classList.toggle('hidden', authenticated);
+        if (usuario) elements.userName.textContent = usuario.nombre || usuario.correo || 'Usuario';
+        elements.movementSubmit.disabled = !authenticated || materials.length === 0;
+      }
+
+      function clearSession() {
+        token = '';
+        localStorage.removeItem(TOKEN_KEY);
+        updateSessionUI(null);
+        elements.userName.textContent = '';
+      }
+
+      function renderStock(alerts) {
+        elements.alertsCount.textContent = `${alerts.length} ${alerts.length === 1 ? 'alerta' : 'alertas'}`;
+        if (!alerts.length) {
+          elements.stockTable.innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center"><div class="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-emerald-400/10 text-emerald-300"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 4 4L19 6"/></svg></div><p class="text-sm font-medium text-slate-300">Sin alertas de reorden</p><p class="mt-1 text-xs text-slate-600">No hay materiales por debajo de su punto de reorden.</p></td></tr>';
+          elements.stockFooter.textContent = 'Todos los materiales están dentro de su nivel de reorden.';
+          return;
+        }
+
+        elements.stockTable.innerHTML = alerts.map((item) => `
+          <tr class="transition hover:bg-white/[.025]">
+            <td class="whitespace-nowrap px-6 py-4 font-mono text-xs text-slate-400">${escapeHtml(item.codigo || `MAT-${item.materialId}`)}</td>
+            <td class="px-4 py-4"><span class="font-medium text-slate-200">${escapeHtml(item.nombre || item.descripcion || 'Material')}</span><span class="mt-1 block text-xs text-slate-600">${escapeHtml(item.unidad || '')}</span></td>
+            <td class="whitespace-nowrap px-4 py-4 font-semibold text-rose-300">${formatNumber(item.stockActual)} <span class="text-xs font-normal text-slate-600">${escapeHtml(item.unidad || '')}</span></td>
+            <td class="whitespace-nowrap px-4 py-4 text-slate-400">${formatNumber(item.puntoReorden)} <span class="text-xs text-slate-600">${escapeHtml(item.unidad || '')}</span></td>
+            <td class="whitespace-nowrap px-6 py-4 text-right"><span class="inline-flex items-center gap-1.5 rounded-full border border-rose-400/15 bg-rose-400/[.08] px-2.5 py-1 text-[10px] font-bold tracking-wide text-rose-300"><span class="h-1.5 w-1.5 rounded-full bg-rose-400"></span>${escapeHtml(item.estado || 'REORDEN')}</span></td>
+          </tr>`).join('');
+        elements.stockFooter.textContent = 'Mostrando materiales activos por debajo del punto de reorden.';
+      }
+
+      function renderDuplicates(duplicates) {
+        elements.duplicatesCount.textContent = `${duplicates.length} ${duplicates.length === 1 ? 'caso' : 'casos'}`;
+        if (!duplicates.length) {
+          elements.duplicateList.innerHTML = '<div class="px-5 py-12 text-center"><div class="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-emerald-400/10 text-emerald-300"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 4 4L19 6"/></svg></div><p class="text-sm font-medium text-slate-300">No se detectaron coincidencias</p><p class="mt-1 text-xs text-slate-600">Las órdenes sospechosas aparecerán aquí.</p></div>';
+          return;
+        }
+
+        elements.duplicateList.innerHTML = duplicates.map((item) => {
+          const order1 = item.orden1 || {};
+          const order2 = item.orden2 || {};
+          const matches = Array.isArray(item.coincidencias) ? item.coincidencias : [];
+          const provider = item.proveedor?.nombre || 'Proveedor';
+          const date = (value) => value
+            ? new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+            : 'Fecha no disponible';
+          const matchMarkup = matches.map((match) => `
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/[.06] bg-ink/50 px-3 py-2.5">
+              <span class="text-xs font-medium text-slate-300">${escapeHtml(match.material?.codigo || '')} ${escapeHtml(match.material?.nombre || 'Artículo')}</span>
+              <span class="rounded-md bg-white/[.06] px-2 py-1 text-[11px] text-slate-400">Cantidad: ${formatNumber(match.cantidad)}</span>
+            </div>`).join('');
+          return `
+            <article class="p-5 transition hover:bg-white/[.015]">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-slate-200">${escapeHtml(provider)}</p>
+                  <p class="mt-1 text-xs text-slate-500">OC #${escapeHtml(order1.id ?? '—')} <span class="px-1 text-slate-700">↔</span> OC #${escapeHtml(order2.id ?? '—')}</p>
+                </div>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-400/15 bg-amber-400/[.08] px-2.5 py-1 text-[10px] font-semibold text-amber-300"><svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Revisar ventana de 48 h</span>
+              </div>
+              <div class="mt-3 grid gap-2 text-[11px] text-slate-500 sm:grid-cols-2">
+                <p><span class="text-slate-600">Primera:</span> ${escapeHtml(date(order1.fechaOrden))}</p>
+                <p><span class="text-slate-600">Segunda:</span> ${escapeHtml(date(order2.fechaOrden))}</p>
+              </div>
+              ${matchMarkup}
+            </article>`;
+        }).join('');
+      }
+
+      function renderMaterials() {
+        const previousValue = elements.materialSelect.value;
+        elements.materialSelect.disabled = false;
+        elements.materialSelect.innerHTML = '<option value="">Selecciona un material</option>'
+          + materials.map((material) => `<option value="${Number(material.id)}">${escapeHtml(material.codigo)} — ${escapeHtml(material.nombre)}</option>`).join('');
+        if (materials.some((material) => String(material.id) === previousValue)) {
+          elements.materialSelect.value = previousValue;
+        }
+        elements.movementSubmit.disabled = !token || materials.length === 0;
+      }
+
+      function setPanelError(container, message, colSpan = 1) {
+        if (container === elements.stockTable) {
+          container.innerHTML = `<tr><td colspan="${colSpan}" class="px-6 py-9 text-center"><p class="text-sm text-rose-300">${escapeHtml(message)}</p><button class="mt-2 text-xs font-medium text-slate-400 underline underline-offset-4 hover:text-white" type="button" data-retry>Reintentar</button></td></tr>`;
+        } else {
+          container.innerHTML = `<div class="px-5 py-9 text-center"><p class="text-sm text-rose-300">${escapeHtml(message)}</p><button class="mt-2 text-xs font-medium text-slate-400 underline underline-offset-4 hover:text-white" type="button" data-retry>Reintentar</button></div>`;
+        }
+      }
+
+      async function loadDashboard() {
+        if (!token) return;
+        elements.refreshButton.disabled = true;
+        elements.refreshIcon.classList.add('animate-spin');
+        hideMessage(elements.globalMessage);
+        elements.materialsKpi.innerHTML = '<span class="skeleton inline-block h-9 w-16 rounded-lg align-middle"></span>';
+        elements.alertsKpi.innerHTML = '<span class="skeleton inline-block h-9 w-12 rounded-lg align-middle"></span>';
+        elements.duplicatesKpi.innerHTML = '<span class="skeleton inline-block h-9 w-12 rounded-lg align-middle"></span>';
+        elements.stockTable.innerHTML = '<tr><td colspan="5" class="px-6 py-8"><div class="skeleton h-4 rounded"></div></td></tr>';
+        elements.duplicateList.innerHTML = '<div class="p-5"><div class="skeleton h-16 rounded-xl"></div></div>';
+
+        const [materialsResult, alertsResult, duplicatesResult] = await Promise.allSettled([
+          request('/materiales'),
+          request('/alertas/reorden'),
+          request('/ordenes/posibles-duplicados'),
+        ]);
+        let hasFailure = false;
+
+        if (materialsResult.status === 'fulfilled') {
+          materials = Array.isArray(materialsResult.value.datos) ? materialsResult.value.datos : [];
+          elements.materialsKpi.textContent = formatNumber(materialsResult.value.total ?? materials.length);
+          renderMaterials();
+        } else {
+          hasFailure = true;
+          elements.materialsKpi.textContent = '—';
+          elements.materialSelect.innerHTML = '<option value="">No se pudieron cargar los materiales</option>';
+          elements.materialSelect.disabled = true;
+          elements.movementSubmit.disabled = true;
+          showMessage(elements.globalMessage, materialsResult.reason.message);
+        }
+
+        if (alertsResult.status === 'fulfilled') {
+          const alerts = Array.isArray(alertsResult.value.alertas) ? alertsResult.value.alertas : [];
+          elements.alertsKpi.textContent = formatNumber(alertsResult.value.total ?? alerts.length);
+          renderStock(alerts);
+        } else {
+          hasFailure = true;
+          elements.alertsKpi.textContent = '—';
+          setPanelError(elements.stockTable, alertsResult.reason.message, 5);
+          elements.alertsCount.textContent = 'No disponible';
+          if (!elements.globalMessage.textContent) showMessage(elements.globalMessage, alertsResult.reason.message);
+        }
+
+        if (duplicatesResult.status === 'fulfilled') {
+          const duplicates = Array.isArray(duplicatesResult.value.duplicados) ? duplicatesResult.value.duplicados : [];
+          elements.duplicatesKpi.textContent = formatNumber(duplicatesResult.value.total ?? duplicates.length);
+          renderDuplicates(duplicates);
+        } else {
+          hasFailure = true;
+          elements.duplicatesKpi.textContent = '—';
+          setPanelError(elements.duplicateList, duplicatesResult.reason.message);
+          elements.duplicatesCount.textContent = 'No disponible';
+          if (!elements.globalMessage.textContent) showMessage(elements.globalMessage, duplicatesResult.reason.message);
+        }
+
+        const online = [materialsResult, alertsResult, duplicatesResult]
+          .some((result) => result.status === 'fulfilled');
+        setConnection(online, online ? (hasFailure ? 'API parcialmente disponible' : 'API conectada') : 'API sin conexión');
+        elements.lastUpdated.textContent = `Última actualización: ${new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date())}`;
+        elements.refreshButton.disabled = false;
+        elements.refreshIcon.classList.remove('animate-spin');
+      }
+
+      async function verifySession() {
+        if (!token) {
+          updateSessionUI(null);
+          setConnection(false, 'Inicia sesión');
+          return;
+        }
+
+        try {
+          const result = await request('/auth/me');
+          updateSessionUI(result.usuario);
+          closeAuth();
+          await loadDashboard();
+        } catch (error) {
+          if (error.status === 401) {
+            clearSession();
+            openAuth('login');
+          } else if (token) {
+            updateSessionUI({ nombre: 'Sesión guardada' });
+          }
+          setConnection(false, error.message.includes('conectar') ? 'API sin conexión' : 'Inicia sesión');
+          showMessage(elements.globalMessage, error.message);
+          if (error.message.includes('conectar') || error.message.includes('responder')) {
+            setPanelError(elements.stockTable, error.message, 5);
+            setPanelError(elements.duplicateList, error.message);
+          }
+        }
+      }
+
+      async function submitAuth(event) {
+        event.preventDefault();
+        hideMessage(elements.authMessage);
+        elements.authSubmit.disabled = true;
+        elements.authSubmit.textContent = 'Conectando…';
+
+        const formData = new FormData(elements.authForm);
+        const body = {
+          correo: formData.get('correo'),
+          password: formData.get('password'),
+        };
+        const path = authMode === 'register' ? '/auth/register' : '/auth/login';
+        if (authMode === 'register') body.nombre = formData.get('nombre');
+
+        try {
+          const result = await request(path, {
+            method: 'POST',
+            body: JSON.stringify(body),
+          });
+          token = result.token;
+          localStorage.setItem(TOKEN_KEY, token);
+          elements.authForm.reset();
+          updateSessionUI(result.usuario);
+          closeAuth();
+          setConnection(true, 'API conectada');
+          await loadDashboard();
+        } catch (error) {
+          showMessage(elements.authMessage, error.message);
+          if (error.message.includes('conectar') || error.message.includes('responder')) {
+            setConnection(false, 'API sin conexión');
+          }
+        } finally {
+          elements.authSubmit.disabled = false;
+          elements.authSubmit.textContent = authMode === 'register' ? 'Crear cuenta y entrar' : 'Iniciar sesión';
+        }
+      }
+
+      async function submitMovement(event) {
+        event.preventDefault();
+        hideMessage(elements.movementMessage);
+        if (!token) {
+          openAuth('login');
+          return;
+        }
+        elements.movementSubmit.disabled = true;
+
+        const data = new FormData(elements.movementForm);
+        const body = {
+          materialId: Number(data.get('materialId')),
+          tipo: data.get('tipo'),
+          cantidad: Number(data.get('cantidad')),
+        };
+        const reference = String(data.get('referencia') || '').trim();
+        if (reference) body.referencia = reference;
+        if (body.tipo === 'traslado') {
+          body.ubicacionOrigen = String(data.get('ubicacionOrigen') || '').trim();
+          body.ubicacionDestino = String(data.get('ubicacionDestino') || '').trim();
+        }
+
+        try {
+          const result = await request('/movimientos', {
+            method: 'POST',
+            body: JSON.stringify(body),
+          });
+          showMessage(
+            elements.movementMessage,
+            `Movimiento registrado. Stock actualizado: ${formatNumber(result.stockActual)}.`,
+            'success',
+          );
+          elements.movementForm.reset();
+          elements.transferFields.classList.add('hidden');
+          elements.transferFields.classList.remove('grid');
+          await loadDashboard();
+        } catch (error) {
+          showMessage(elements.movementMessage, error.message);
+        } finally {
+          elements.movementSubmit.disabled = !token || materials.length === 0;
+        }
+      }
+
+      elements.loginButton.addEventListener('click', () => openAuth('login'));
+      elements.logoutButton.addEventListener('click', () => {
+        clearSession();
+        materials = [];
+        elements.materialsKpi.textContent = '—';
+        elements.alertsKpi.textContent = '—';
+        elements.duplicatesKpi.textContent = '—';
+        elements.materialSelect.innerHTML = '<option value="">Inicia sesión para cargar materiales</option>';
+        elements.materialSelect.disabled = false;
+        elements.stockTable.innerHTML = '<tr><td colspan="5" class="px-6 py-10 text-center text-sm text-slate-500">Inicia sesión para consultar el inventario.</td></tr>';
+        elements.duplicateList.innerHTML = '<div class="px-5 py-10 text-center text-sm text-slate-500">Inicia sesión para revisar posibles duplicados.</div>';
+        elements.alertsCount.textContent = '— alertas';
+        elements.duplicatesCount.textContent = '— casos';
+        setConnection(true, 'Sesión cerrada');
+      });
+      elements.refreshButton.addEventListener('click', () => {
+        if (token) loadDashboard();
+        else openAuth('login');
+      });
+      elements.authForm.addEventListener('submit', submitAuth);
+      elements.authToggleButton.addEventListener('click', () => setAuthMode(authMode === 'login' ? 'register' : 'login'));
+      elements.closeAuthButton.addEventListener('click', closeAuth);
+      elements.authModal.addEventListener('click', (event) => {
+        if (event.target === elements.authModal) closeAuth();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !elements.authModal.classList.contains('hidden')) closeAuth();
+      });
+      document.querySelectorAll('[data-open-auth]').forEach((button) => {
+        button.addEventListener('click', () => openAuth('login'));
+      });
+      document.addEventListener('click', (event) => {
+        if (event.target.closest('[data-retry]')) {
+          if (token) loadDashboard();
+          else openAuth('login');
+        }
+      });
+      elements.movementType.addEventListener('change', () => {
+        const isTransfer = elements.movementType.value === 'traslado';
+        elements.transferFields.classList.toggle('hidden', !isTransfer);
+        elements.transferFields.classList.toggle('grid', isTransfer);
+        elements.movementForm.elements.ubicacionOrigen.required = isTransfer;
+        elements.movementForm.elements.ubicacionDestino.required = isTransfer;
+      });
+      elements.movementForm.addEventListener('submit', submitMovement);
+
+      verifySession();
+    })();
+  </script>
+</body>
+</html>
